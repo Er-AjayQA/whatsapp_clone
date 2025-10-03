@@ -7,6 +7,7 @@ const response = require("./utils/responseHandler");
 require("dotenv").config();
 const PORT = process.env.PORT || 8000;
 const authRoutes = require("./routes/authRoute");
+const chatRoutes = require("./routes/chatRoute");
 
 // ******** Config App ******** //
 const app = express();
@@ -20,6 +21,7 @@ connectDB();
 
 // ******** Routes ******** //
 app.use("/api/auth", authRoutes);
+app.use("/api/auth", chatRoutes);
 
 // ******** Checking Server Health ******** //
 app.get("/api/v1/welcome", (req, res) => {
