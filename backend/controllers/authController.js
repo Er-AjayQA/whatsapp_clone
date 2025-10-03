@@ -6,6 +6,7 @@ const response = require("../utils/responseHandler");
 const twilioServices = require("../services/twilioService");
 const generateToken = require("../utils/generateToken");
 const { uploadFileToCloudinary } = require("../config/cloudinaryConfig");
+const Conversation = require("../models/Conversation");
 
 // ******** Send Otp Controller ******** //
 const sendOtp = async (req, res) => {
@@ -148,6 +149,28 @@ const updateProfile = async (req, res) => {
   }
 };
 
+// ******** Check Authenticate Controller ******** //
+const checkAuthenticated = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    if (!userId) {
+      return response(res, 404, "Unauthorized!");
+    }
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return response(res, 404, "User not found");
+    }
+
+    return response(res, 200, "User retrieved and allow to user PingMe", user);
+  } catch (error) {
+    console.error(error);
+    return response(res, 500, "Internal server error");
+  }
+};
+
 // ******** Logout Controller ******** //
 const logout = async (req, res) => {
   try {
@@ -159,5 +182,49 @@ const logout = async (req, res) => {
   }
 };
 
+// ******** Get All Users Controller ******** //
+const getAllUsers = async (req, res) => {
+  const loggedInUser = req.user.userId;
+  try {
+    const users = await User.find({ _id: { $ne: loggedInUser } })
+      .select(
+        "username profilePicture lastSeen isOnline about phoneNumber phonePrefix"
+      )
+      .lean();
+
+    const usersWithConversation = await Promise.all(
+      users.map(async (user) => {
+        const conversation = await Conversation.findOne({
+          participants: { $all: [loggedInUser, user?._id] },
+        })
+          .populate({
+            path: "lastMessage",
+            select: "content createdAt sender receiver ",
+          })
+          .lean();
+
+        return { ...user, conversation: conversation || null };
+      })
+    );
+
+    return response(
+      res,
+      200,
+      "User retrieved successfully",
+      usersWithConversation
+    );
+  } catch (error) {
+    console.error(error);
+    return response(res, 500, "Internal server error");
+  }
+};
+
 // ******** Exports ******** //
-module.exports = { sendOtp, verifyOtp, updateProfile, logout };
+module.exports = {
+  sendOtp,
+  verifyOtp,
+  updateProfile,
+  checkAuthenticated,
+  getAllUsers,
+  logout,
+};

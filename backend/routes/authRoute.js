@@ -17,6 +17,8 @@ router.put(
   multerMiddleware,
   authController.updateProfile
 );
+router.get("/check-auth", authMiddleware, authController.checkAuthenticated);
+router.get("/users", authMiddleware, authController.getAllUsers);
 
 // ******** Exports ******** //
 module.exports = router;
