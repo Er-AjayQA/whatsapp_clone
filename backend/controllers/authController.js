@@ -4,8 +4,10 @@ const sendOtpToEmail = require("../services/emailService");
 const otpGenerate = require("../utils/otpGenerator");
 const response = require("../utils/responseHandler");
 const twilioServices = require("../services/twilioService");
+const generateToken = require("../utils/generateToken");
+const { uploadFileToCloudinary } = require("../config/cloudinaryConfig");
 
-// ******** Send Otp ******** //
+// ******** Send Otp Controller ******** //
 const sendOtp = async (req, res) => {
   const { phoneNumber, phonePrefix, email } = req.body;
   const otp = otpGenerate();
@@ -48,6 +50,7 @@ const sendOtp = async (req, res) => {
   }
 };
 
+// ******** Verify Otp Controller ******** //
 const verifyOtp = async (req, res) => {
   const { phoneNumber, phonePrefix, email, otp } = req.body;
 
@@ -79,7 +82,7 @@ const verifyOtp = async (req, res) => {
     } // Case-2: If verify with Phone Number
     else {
       if (!phoneNumber || !phonePrefix) {
-        return response(res, 400, "Phone number and Suffix are required");
+        return response(res, 400, "Phone number and Prefix are required");
       }
 
       const fullPhoneNumber = `${phonePrefix}${phoneNumber}`; // Getting phone number including suffix
@@ -97,9 +100,64 @@ const verifyOtp = async (req, res) => {
       await user.save();
     }
 
-    const token = "";
+    const token = generateToken(user?._id);
+
+    res.cookie("auth_token", token, {
+      httpOnly: true,
+      maxAge: 1000 * 60 * 60 * 24 * 365,
+    });
+
+    return response(res, 200, "Otp verified successfully", { token, user });
   } catch (error) {
     console.error(error);
     return response(res, 500, "Internal server error");
   }
 };
+
+// ******** Update Profile Controller ******** //
+const updateProfile = async (req, res) => {
+  const { username, agreed, about } = req.body;
+  const userId = req.user.userId;
+
+  try {
+    const user = await User.findById(userId);
+    const file = req.file;
+
+    if (file) {
+      const uploadResult = await uploadFileToCloudinary(file);
+      user.profilePicture = uploadResult?.secure_url;
+    } else if (req.body.profilePicture) {
+      user.profilePicture = req.body.profilePicture;
+    }
+
+    if (username) {
+      user.username = username;
+    }
+    if (agreed) {
+      user.agreed = agreed;
+    }
+    if (about) {
+      user.about = about;
+    }
+
+    await user.save();
+    return response(res, 201, "User profile updated successfully", user);
+  } catch (error) {
+    console.error(error);
+    return response(res, 500, "Internal server error");
+  }
+};
+
+// ******** Logout Controller ******** //
+const logout = async (req, res) => {
+  try {
+    res.cookie("auth_token", "", { expires: new Date(0) });
+    return response(res, 200, "User logout successfully");
+  } catch (error) {
+    console.error(error);
+    return response(res, 500, "Internal server error");
+  }
+};
+
+// ******** Exports ******** //
+module.exports = { sendOtp, verifyOtp, updateProfile, logout };
