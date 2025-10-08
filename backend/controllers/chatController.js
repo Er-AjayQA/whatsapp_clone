@@ -64,8 +64,7 @@ exports.sendMessage = async (req, res) => {
     await conversation.save();
 
     // Instantly get message
-    const populateMessage = await message
-      .findOne(message?._id)
+    const populateMessage = await Message.findOne(message?._id)
       .populate("sender", "username profilePicture")
       .populate("receiver", "username profilePicture");
 
@@ -103,7 +102,7 @@ exports.getConversations = async (req, res) => {
 
 // ******** Get Messages of Specific Conversation  Controller ******** //
 exports.getMessages = async (req, res) => {
-  const { conversationId } = res.params;
+  const { conversationId } = req.params;
   const userId = req.user.userId;
 
   try {
@@ -119,7 +118,7 @@ exports.getMessages = async (req, res) => {
     const messages = await Message.find({ conversation: conversationId })
       .populate("sender", "username profilePicture")
       .populate("receiver", "username profilePicture")
-      .sort(createdAt);
+      .sort("createdAt");
 
     await Message.updateMany(
       {

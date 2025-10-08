@@ -21,7 +21,7 @@ connectDB();
 
 // ******** Routes ******** //
 app.use("/api/auth", authRoutes);
-app.use("/api/auth", chatRoutes);
+app.use("/api/chat", chatRoutes);
 
 // ******** Checking Server Health ******** //
 app.get("/api/v1/welcome", (req, res) => {
